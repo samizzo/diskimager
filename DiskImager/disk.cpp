@@ -19,9 +19,11 @@
 
 #include "stdafx.h"
 #include "resource.h"
+#include <string>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <assert.h>
 #include <windows.h>
 #include <winioctl.h>
 #include <Setupapi.h>
@@ -337,35 +339,29 @@ BOOL GetDisksProperty(HWND hWnd, HANDLE hDevice, PSTORAGE_DEVICE_DESCRIPTOR pDev
 // some routines fail if there's no trailing slash in a name,
 // 		others fail if there is.  So this routine takes a name (trailing
 // 		slash or no), and creates 2 versions - one with the slash, and one w/o
-//
-// 		CALLER MUST FREE THE 2 RETURNED STRINGS
-bool slashify(LPCTSTR str, LPTSTR *slash, LPTSTR *noSlash)
+static bool slashify(LPCTSTR str, std::wstring *slash, std::wstring *noSlash)
 {
+	assert(slash != nullptr);
+	assert(noSlash != nullptr);
+
 	bool retVal = false;
 	size_t strLen = _tcslen(str);
 	if (strLen > 0)
 	{
-		if (*(str + strLen - 1) == '\\')
+		if (str[strLen - 1] == _T('\\'))
 		{
 			// trailing slash exists
-			if (((*slash = (TCHAR *)calloc((strLen + 1), sizeof(TCHAR))) != NULL) &&
-				((*noSlash = (TCHAR *)calloc(strLen, sizeof(TCHAR))) != NULL))
-			{
-				_tcsncpy(*slash, str, strLen);
-				_tcsncpy(*noSlash, *slash, (strLen - 1));
-				retVal = true;
-			}
+			*slash = str;
+			*noSlash = str;
+			noSlash->pop_back();
+			retVal = true;
 		}
 		else
 		{
 			// no trailing slash exists
-			if (((*slash = (TCHAR *)calloc((strLen + 2), sizeof(TCHAR))) != NULL) &&
-				((*noSlash = (TCHAR *)calloc((strLen + 1), sizeof(TCHAR))) != NULL))
-			{
-				_tcsncpy(*noSlash, str, strLen);
-				_stprintf(*slash, _T("%s\\"), *noSlash);
-				retVal = true;
-			}
+			*slash = str + _T('\\');
+			*noSlash = str;
+			retVal = true;
 		}
 	}
 	return(retVal);
@@ -391,8 +387,8 @@ bool CheckDriveType(HWND hWnd, LPCTSTR name, ULONG *pid)
     PSTORAGE_DEVICE_DESCRIPTOR pDevDesc;
     DEVICE_NUMBER deviceInfo;
     bool retVal = false;
-    LPTSTR nameWithSlash;
-    LPTSTR nameNoSlash;
+    std::wstring nameWithSlash;
+	std::wstring nameNoSlash;
     int driveType;
     DWORD cbBytesReturned;
 
@@ -402,16 +398,16 @@ bool CheckDriveType(HWND hWnd, LPCTSTR name, ULONG *pid)
         return(retVal);
     }
 
-    driveType = GetDriveType(nameWithSlash);
+    driveType = GetDriveType(nameWithSlash.c_str());
     switch( driveType )
     {
     case DRIVE_REMOVABLE: // The media can be removed from the drive.
     case DRIVE_FIXED:     // The media cannot be removed from the drive. Some USB drives report as this.
-        hDevice = CreateFile(nameNoSlash, FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+        hDevice = CreateFile(nameNoSlash.c_str(), FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
         if (hDevice == INVALID_HANDLE_VALUE)
         {
 			CString strMessage;
-			strMessage.Format(_T("An error occurred when attempting to get a handle on %s."), nameWithSlash);
+			strMessage.Format(_T("An error occurred when attempting to get a handle on %s."), nameWithSlash.c_str());
 			ShowErrorMessage(hWnd, strMessage);
         }
         else
@@ -438,7 +434,7 @@ bool CheckDriveType(HWND hWnd, LPCTSTR name, ULONG *pid)
                 // IOCTL_STORAGE_CHECK_VERIFY2 fails on some devices under XP/Vista, try the other (slower) method, just in case.
                 {
                     CloseHandle(hDevice);
-                    hDevice = CreateFile(nameNoSlash, FILE_READ_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+                    hDevice = CreateFile(nameNoSlash.c_str(), FILE_READ_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
                     if(DeviceIoControl(hDevice, IOCTL_STORAGE_CHECK_VERIFY, NULL, 0, NULL, 0, &cbBytesReturned, (LPOVERLAPPED) NULL))
                     {
                         *pid = deviceInfo.DeviceNumber;
@@ -455,10 +451,6 @@ bool CheckDriveType(HWND hWnd, LPCTSTR name, ULONG *pid)
     default:
         retVal = false;
     }
-
-    // free the strings allocated by slashify
-    free(nameWithSlash);
-    free(nameNoSlash);
 
     return(retVal);
 }
