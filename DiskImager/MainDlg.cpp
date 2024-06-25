@@ -194,7 +194,7 @@ LRESULT CMainDlg::OnBrowseClicked(WORD wNotifyCode, WORD wID, HWND hWndCtl)
 	dialog.m_ofn.lpstrTitle = _T("Select a disk image");
 	//if (PathFileExists(m_strImageFile))
 	{
-		_tcscpy(dialog.m_szFileName, m_strImageFile);
+		_tcscpy_s(dialog.m_szFileName, m_strImageFile);
 	}
 	//else
 	//{
