@@ -13,6 +13,7 @@
 #include <atlimage.h>
 #include <tuple>
 #include <algorithm>
+#include <assert.h>
 #include "MainDlg.h"
 #include "disk.h"
 
@@ -375,14 +376,7 @@ LRESULT CMainDlg::OnReadClicked(WORD wNotifyCode, WORD wID, HWND hWndCtl)
 			SetReadWriteButtonState();
 			return 0;
 		}
-		if (nSectors == 0ul)
-		{
-			m_wndProgress.SetRange32(0, 100);
-		}
-		else
-		{
-			m_wndProgress.SetRange32(0, (int)nSectors);
-		}
+		m_wndProgress.SetRange32(0, 100);
 		lasti = 0ul;
 		m_UpdateTimer.start();
 		StartTimer();
@@ -413,7 +407,7 @@ LRESULT CMainDlg::OnReadClicked(WORD wNotifyCode, WORD wID, HWND hWndCtl)
 				//elapsed_timer->update(i, numsectors);
 				lasti = i;
 			}
-			m_wndProgress.SetPos(i);
+			m_wndProgress.SetPos((int)(i * 100 / nSectors));
 			HandleMessages();
 		}
 		m_wndProgress.SetPos(0);
@@ -545,10 +539,12 @@ LRESULT CMainDlg::OnWriteClicked(WORD wNotifyCode, WORD wID, HWND hWndCtl)
 			{
 				bool datafound = false;
 				i = nAvailableSectors;
-				unsigned long nextchunksize = 0;
+				uint64_t nextchunksize = 0;
 				while ((i < nSectors) && (datafound == false))
 				{
 					nextchunksize = ((nSectors - i) >= 1024ul) ? 1024ul : (nSectors - i);
+					assert(nextchunksize <= 1024ul);
+					assert(nextchunksize * m_SectorSize <= UINT32_MAX);
 					ReadSectorDataFromHandle(m_hWnd, File, i, nextchunksize, m_SectorSize, SectorData);
 					if (SectorData.empty())
 					{
@@ -557,8 +553,8 @@ LRESULT CMainDlg::OnWriteClicked(WORD wNotifyCode, WORD wID, HWND hWndCtl)
 						i = nSectors + 1;
 					}
 					else {
-						unsigned int j = 0;
-						unsigned limit = nextchunksize * m_SectorSize;
+						uint32_t j = 0;
+						uint32_t limit = (uint32_t)(nextchunksize * m_SectorSize);
 						while ((datafound == false) && (j < limit))
 						{
 							if (SectorData[j++] != 0)
@@ -594,7 +590,7 @@ LRESULT CMainDlg::OnWriteClicked(WORD wNotifyCode, WORD wID, HWND hWndCtl)
 				}
 			}
 
-			m_wndProgress.SetRange32(0, (nSectors == 0ul) ? 100 : (int)nSectors);
+			m_wndProgress.SetRange32(0, 100);
 			lasti = 0ul;
 			m_UpdateTimer.start();
 			StartTimer();
@@ -625,7 +621,7 @@ LRESULT CMainDlg::OnWriteClicked(WORD wNotifyCode, WORD wID, HWND hWndCtl)
 					UpdateElapsedTime(i, nSectors);
 					lasti = i;
 				}
-				m_wndProgress.SetPos(i);
+				m_wndProgress.SetPos((int)(i * 100 / nSectors));
 				HandleMessages();
 			}
 			if (m_Status == STATUS_CANCELED) {
@@ -747,10 +743,12 @@ LRESULT CMainDlg::OnVerifyOnlyClicked(WORD wNotifyCode, WORD wID, HWND hWndCtl)
 			{
 				bool bDataFound = false;
 				i = nAvailableSectors;
-				unsigned long nNextChunkSize = 0;
+				uint64_t nNextChunkSize = 0;
 				while ((i < nSectors) && (bDataFound == false))
 				{
 					nNextChunkSize = ((nSectors - i) >= 1024ul) ? 1024ul : (nSectors - i);
+					assert(nNextChunkSize <= 1024ul);
+					assert(nNextChunkSize * m_SectorSize <= UINT32_MAX);
 					ReadSectorDataFromHandle(m_hWnd, File, i, nNextChunkSize, m_SectorSize, SectorData);
 					if (SectorData.empty())
 					{
@@ -759,8 +757,8 @@ LRESULT CMainDlg::OnVerifyOnlyClicked(WORD wNotifyCode, WORD wID, HWND hWndCtl)
 						i = nSectors + 1;
 					}
 					else {
-						unsigned int j = 0;
-						unsigned limit = nNextChunkSize * m_SectorSize;
+						uint32_t j = 0;
+						uint32_t limit = (uint32_t)(nNextChunkSize * m_SectorSize);
 						while ((bDataFound == false) && (j < limit))
 						{
 							if (SectorData[j++] != 0)
@@ -790,7 +788,7 @@ LRESULT CMainDlg::OnVerifyOnlyClicked(WORD wNotifyCode, WORD wID, HWND hWndCtl)
 					return 0;
 				}
 			}
-			m_wndProgress.SetRange32(0, (nSectors == 0ul) ? 100 : (int)nSectors);
+			m_wndProgress.SetRange32(0, 100);
 			m_UpdateTimer.start();
 			StartTimer();
 			lasti = 0ul;
@@ -815,7 +813,8 @@ LRESULT CMainDlg::OnVerifyOnlyClicked(WORD wNotifyCode, WORD wID, HWND hWndCtl)
 					SetReadWriteButtonState();
 					return 0;
 				}
-				result = memcmp(SectorData.data(), DiskData.data(), ((nSectors - i >= 1024ul) ? 1024ul : (nSectors - i)) * m_SectorSize);
+				size_t size = (size_t)(((nSectors - i >= 1024ul) ? 1024ul : (nSectors - i)) * m_SectorSize);
+				result = memcmp(SectorData.data(), DiskData.data(), size);
 				if (result)
 				{
 					CString strMessage;
@@ -834,7 +833,7 @@ LRESULT CMainDlg::OnVerifyOnlyClicked(WORD wNotifyCode, WORD wID, HWND hWndCtl)
 				}
 				SectorData.clear();
 				DiskData.clear();
-				m_wndProgress.SetPos(i);
+				m_wndProgress.SetPos((int)(i * 100 / nSectors));
 				HandleMessages();
 			}
 			SectorData.clear();
@@ -1189,7 +1188,7 @@ bool CMainDlg::IsSameDrive(TCHAR nVolume)
 	if (nIndex >= 0)
 	{
 		DWORD dwDrive = m_wndDevice.GetItemData(nIndex);
-		uint8_t nDeviceType = LOWORD(dwDrive);
+		WORD nDeviceType = LOWORD(dwDrive);
 		if (nDeviceType == DEVICE_DRIVE)
 		{
 			return nVolume== HIWORD(dwDrive);
@@ -1270,8 +1269,8 @@ void CMainDlg::UpdateElapsedTime(uint64_t position, uint64_t total)
 
 	DWORD seconds = m_ElapsedTimer.elapsed()/ MS_PER_SEC;
 
-	unsigned short eSec = 0, eMin = 0, eHour = 0;
-	unsigned short tSec = 0, tMin = 0, tHour = 0;
+	DWORD eSec = 0, eMin = 0, eHour = 0;
+	DWORD tSec = 0, tMin = 0, tHour = 0;
 
 	eSec = seconds % SECS_PER_MIN;
 	if (seconds >= SECS_PER_MIN)
@@ -1305,9 +1304,6 @@ void CMainDlg::UpdateElapsedTime(uint64_t position, uint64_t total)
 		qs.AppendFormat(_T("%02d:"), tHour);
 	}
 	qs.AppendFormat(_T("%02d:%02d"), tMin, tSec);
-	// added a space following the times to separate the text slightly from the right edge of the status bar...
-	// there's probably a more "QT-correct" way to do that (like, margins or something),
-	// but this was simple and effective.
 	m_wndStatusBar.SetPaneText(ID_ELAPSED_TIME, qs);
 }
 
@@ -1349,7 +1345,8 @@ bool CMainDlg::HashFile(int hash_type, CString& strHashResult, LPCTSTR lpszFileN
 	DWORD dwReaded;
 	file.GetSize(llFileSize);
 	std::vector<BYTE> buffer;
-	buffer.resize(min(llFileSize, nMaxBufSize));
+	size_t newSize = (size_t)min(llFileSize, (ULONGLONG)nMaxBufSize);
+	buffer.resize(newSize);
 	while (file.Read(buffer.data(), buffer.size(), dwReaded) == ERROR_SUCCESS && dwReaded>0)
 	{
 		llTotalReaded += dwReaded;
@@ -1375,7 +1372,7 @@ bool CMainDlg::HashFile(int hash_type, CString& strHashResult, LPCTSTR lpszFileN
 	}
 
 	strHashResult.Empty();
-	for (int i = 0; i <= hash_len - 1; i++)
+	for (uint32_t i = 0; i <= hash_len - 1; i++)
 	{
 		strHashResult.AppendFormat(_T("%02X"), hash_data[i] & 0xFF);
 	}
