@@ -367,7 +367,7 @@ static bool slashify(LPCTSTR str, std::wstring *slash, std::wstring *noSlash)
 	return(retVal);
 }
 
-bool GetMediaType(HANDLE hDevice)
+static bool IsFixedOrRemovable(HANDLE hDevice)
 {
     DISK_GEOMETRY diskGeo;
     DWORD cbBytesReturned;
@@ -418,7 +418,7 @@ bool CheckDriveType(HWND hWnd, LPCTSTR name, ULONG *pid)
 
             // get the device number if the drive is
             // removable or (fixed AND on the usb bus, SD, or MMC (undefined in XP/mingw))
-            if(GetMediaType(hDevice) && GetDisksProperty(hWnd, hDevice, pDevDesc, &deviceInfo) &&
+            if(IsFixedOrRemovable(hDevice) && GetDisksProperty(hWnd, hDevice, pDevDesc, &deviceInfo) &&
                     ( ((driveType == DRIVE_REMOVABLE) && (pDevDesc->BusType != BusTypeSata))
                       || ( (driveType == DRIVE_FIXED) && ((pDevDesc->BusType == BusTypeUsb)
                       || (pDevDesc->BusType == BusTypeSd ) || (pDevDesc->BusType == BusTypeMmc )) ) ) )
