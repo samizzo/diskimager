@@ -7,6 +7,7 @@
 
 #include "MainDlg.h"
 #include <gdiplus.h>
+#include "log.h"
 
 CAppModule _Module;
 
@@ -38,6 +39,8 @@ int Run(LPTSTR lpstrCmdLine = NULL, int nCmdShow = SW_SHOWDEFAULT)
 
 int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpstrCmdLine, int nCmdShow)
 {
+	Log_Open();
+
 	HRESULT hRes = ::CoInitialize(NULL);
 	ATLASSERT(SUCCEEDED(hRes));
 
@@ -56,6 +59,8 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 
 	_Module.Term();
 	::CoUninitialize();
+
+	Log_Close();
 
 	return nRet;
 }
