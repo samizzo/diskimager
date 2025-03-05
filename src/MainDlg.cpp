@@ -1310,7 +1310,7 @@ void CMainDlg::UpdateElapsedTime(uint64_t position, uint64_t total)
 void CMainDlg::UpdateSpeed(double speed)
 {
 	CString strText;
-	strText.Format(_T("%fMB/s"), speed);
+	strText.Format(_T("%.2f MB/s"), speed);
 	m_wndStatusBar.SetPaneText(ID_DEFAULT_PANE, strText);
 	m_UpdateTimer.start();
 }
