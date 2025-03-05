@@ -30,6 +30,7 @@
 //#include <Ntddstor.h>
 #include <cfgmgr32.h>
 #include "disk.h"
+#include "log.h"
 
 #pragma comment( lib, "setupapi.lib" )
 
@@ -399,6 +400,17 @@ bool CheckDriveType(HWND hWnd, LPCTSTR name, ULONG *pid)
     }
 
     driveType = GetDriveType(nameWithSlash.c_str());
+
+	DWORD fileSystemFlags;
+	if (GetVolumeInformation(nameWithSlash.c_str(), NULL, 0, NULL, NULL, &fileSystemFlags, NULL, 0))
+	{
+		if (fileSystemFlags & FILE_SUPPORTS_REMOTE_STORAGE)
+		{
+			Log_Info("Ignoring drive %S because it has FILE_SUPPORTS_REMOTE_STORAGE set\n", nameWithSlash.c_str());
+			return(retVal);
+		}
+	}
+
     switch( driveType )
     {
     case DRIVE_REMOVABLE: // The media can be removed from the drive.
