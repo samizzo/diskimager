@@ -1,6 +1,8 @@
 .vs
-/**/Debug
-/**/Release
-/packages
+Debug
+Release
+packages
 
 *.user
+*.vtcache
+*.log
