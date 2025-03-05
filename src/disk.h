@@ -76,6 +76,12 @@ struct CDiskInfo
 // IOCTL control code
 #define IOCTL_STORAGE_QUERY_PROPERTY   CTL_CODE(IOCTL_STORAGE_BASE, 0x0500, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
+enum class FileType
+{
+	RawImage,
+	VHDFixedSize
+};
+
 CAtlFile GetHandleOnFile(HWND hWnd, LPCTSTR filelocation, DWORD access);
 CAtlFile GetHandleOnDevice(HWND hWnd, DWORD dwDevice, DWORD access);
 CString getDriveLabel(LPCTSTR drv);
@@ -84,7 +90,7 @@ void ReadSectorDataFromHandle(HWND hWnd, HANDLE handle, unsigned long long start
 bool WriteSectorDataToHandle(HWND hWnd, HANDLE handle, char *data, unsigned long long startsector, unsigned long long numsectors, unsigned long long sectorsize);
 unsigned long long GetDiskSectors(HWND hWnd, HANDLE handle, unsigned long long *pSectorSize);
 unsigned long long GetVolumeSectors(HWND hWnd, TCHAR nVolume, unsigned long long *pSectorSize);
-unsigned long long GetFileSizeInSectors(HWND hWnd, HANDLE handle, unsigned long long sectorsize);
+unsigned long long GetFileSizeInSectors(HWND hWnd, HANDLE handle, unsigned long long sectorsize, FileType fileType);
 bool SpaceAvailable(HWND hWnd, LPCTSTR location, unsigned long long spaceneeded);
 
 bool CheckDriveType(HWND hWnd, LPCTSTR name, ULONG *pid);

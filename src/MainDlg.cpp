@@ -186,21 +186,11 @@ LRESULT CMainDlg::OnBrowseClicked(WORD wNotifyCode, WORD wID, HWND hWndCtl)
 	DoDataExchange(TRUE, IDC_IMAGEFILE);
 
 	// See if there is a user-defined file extension.
-	TCHAR szFileType[1024] = { 0 };
-	const TCHAR szImageFilter[] = _T("Disk Images (*.img)\0*.img\0All Files\0*.*\0");
-	DWORD dwSize = GetEnvironmentVariable(_T("DiskImagerFiles"), szFileType, _countof(szFileType));
-	memcpy(szFileType + dwSize, szImageFilter, sizeof(szImageFilter));
+	const TCHAR szImageFilter[] = _T("Disk Images (*.img)\0*.img\0Fixed Size Disk Image (*.vhd)\0*.vhd\0All Files (*.*)\0*.*\0");
 	// create a generic FileDialog
-	CFileDialog dialog(TRUE, NULL, NULL, OFN_HIDEREADONLY | OFN_EXPLORER | OFN_DONTADDTORECENT, szFileType);
+	CFileDialog dialog(TRUE, NULL, NULL, OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_DONTADDTORECENT, szImageFilter);
 	dialog.m_ofn.lpstrTitle = _T("Select a disk image");
-	//if (PathFileExists(m_strImageFile))
-	{
-		_tcscpy_s(dialog.m_szFileName, m_strImageFile);
-	}
-	//else
-	//{
-	//	_tcscpy(dialog.m_szFileName, m_strHomeDir);
-	//}
+	_tcscpy_s(dialog.m_szFileName, m_strImageFile);
 
 	if (dialog.DoModal(m_hWnd)==IDOK)
 	{
@@ -300,6 +290,10 @@ LRESULT CMainDlg::OnReadClicked(WORD wNotifyCode, WORD wID, HWND hWndCtl)
 		std::vector<CVolume> volumes = OpenCurrentVolumes();
 		HANDLE hDevice = INVALID_HANDLE_VALUE;
 
+		FileType fileType = FileType::RawImage;
+		if (strFullPath.Right(4).CompareNoCase(_T(".vhd")))
+			fileType = FileType::VHDFixedSize;
+
 		File = GetHandleOnFile(m_hWnd, strFullPath, GENERIC_WRITE);
 		if (File == INVALID_HANDLE_VALUE)
 		{
@@ -355,7 +349,7 @@ LRESULT CMainDlg::OnReadClicked(WORD wNotifyCode, WORD wID, HWND hWndCtl)
 			hDevice = volumes[0].GetHandle();
 		}
 
-		filesize = GetFileSizeInSectors(m_hWnd, File, m_SectorSize);
+		filesize = GetFileSizeInSectors(m_hWnd, File, m_SectorSize, fileType);
 		if (filesize >= nSectors)
 		{
 			spaceneeded = 0ull;
@@ -478,6 +472,9 @@ LRESULT CMainDlg::OnWriteClicked(WORD wNotifyCode, WORD wID, HWND hWndCtl)
 			std::vector<CVolume> volumes = OpenCurrentVolumes();
 			HANDLE hDevice = INVALID_HANDLE_VALUE;
 
+			FileType fileType = FileType::RawImage;
+			if (!m_strImageFile.Right(4).CompareNoCase(_T(".vhd")))
+				fileType = FileType::VHDFixedSize;
 			File=GetHandleOnFile(m_hWnd, m_strImageFile, GENERIC_READ);
 			if (File == NULL)
 			{
@@ -526,7 +523,7 @@ LRESULT CMainDlg::OnWriteClicked(WORD wNotifyCode, WORD wID, HWND hWndCtl)
 				hDevice = volumes[0].GetHandle();
 			}
 
-			nSectors = GetFileSizeInSectors(m_hWnd, File, m_SectorSize);
+			nSectors = GetFileSizeInSectors(m_hWnd, File, m_SectorSize, fileType);
 			if (!nSectors)
 			{
 				//For external card readers you may not get device change notification when you remove the card/flash.
@@ -685,6 +682,9 @@ LRESULT CMainDlg::OnVerifyOnlyClicked(WORD wNotifyCode, WORD wID, HWND hWndCtl)
 			std::vector<CVolume> volumes = OpenCurrentVolumes();
 			HANDLE hDevice = INVALID_HANDLE_VALUE;
 
+			FileType fileType = FileType::RawImage;
+			if (m_strImageFile.Right(4).CompareNoCase(_T(".vhd")))
+				fileType = FileType::VHDFixedSize;
 			File=GetHandleOnFile(m_hWnd, m_strImageFile, GENERIC_READ);
 			if (File == INVALID_HANDLE_VALUE)
 			{
@@ -730,7 +730,7 @@ LRESULT CMainDlg::OnVerifyOnlyClicked(WORD wNotifyCode, WORD wID, HWND hWndCtl)
 				hDevice = volumes[0].GetHandle();
 			}
 
-			nSectors = GetFileSizeInSectors(m_hWnd, File, m_SectorSize);
+			nSectors = GetFileSizeInSectors(m_hWnd, File, m_SectorSize, fileType);
 			if (!nSectors)
 			{
 				//For external card readers you may not get device change notification when you remove the card/flash.

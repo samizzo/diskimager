@@ -209,7 +209,7 @@ unsigned long long GetVolumeSectors(HWND hWnd, TCHAR nVolume, unsigned long long
 	return (unsigned long long)dwSectorsPerCluster * dwTotalNumberOfClusters;
 }
 
-unsigned long long GetFileSizeInSectors(HWND hWnd, HANDLE handle, unsigned long long sectorsize)
+unsigned long long GetFileSizeInSectors(HWND hWnd, HANDLE handle, unsigned long long sectorsize, FileType fileType)
 {
     unsigned long long retVal = 0;
     if (sectorsize) // avoid divide by 0
@@ -222,6 +222,12 @@ unsigned long long GetFileSizeInSectors(HWND hWnd, HANDLE handle, unsigned long 
         }
         else
         {
+			if (fileType == FileType::VHDFixedSize)
+			{
+				// VHD fixed size disk image has a 512 byte footer.
+				filesize.QuadPart -= 512;
+			}
+
             retVal = ((unsigned long long)filesize.QuadPart / sectorsize ) + (((unsigned long long)filesize.QuadPart % sectorsize )?1:0);
         }
     }
